@@ -28,7 +28,7 @@
     sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
 
-# Turn off swap on fstab
+## Turn off swap on fstab
     sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
     sudo swapoff -a
 
@@ -114,9 +114,12 @@
     chmod +x ~/install-k8s/dashboard.sh
     sudo ln -s ~/install-k8s/dashboard.sh /usr/local/bin/dashboard
     dashboard start
-    kubectl get pods -A
+    kubectl get pods -n kubernetes-dashboard
+    kubectl get svc -n kubernetes-dashboard
+*Notice the port of kubernetes dashboard service
 
 ## Access kubernetes dashboard
-    Access http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
+Access 
+    [http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/](http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/)
 or 
-    http://[master_node_IP]:[port_service]
+    __http://[master_node_IP]:[port_service]__

@@ -1,8 +1,9 @@
 # install-k8s 
 
-## Update
+## Update System
     sudo yum -y update && sudo systemctl reboot
 
+## Add kubernetes repo
     sudo tee /etc/yum.repos.d/kubernetes.repo<<EOF
     [kubernetes]
     name=Kubernetes
@@ -13,15 +14,21 @@
     gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
     EOF
 
+
+## Install k8s packages and etc
     sudo yum -y install epel-release vim git curl wget kubelet kubeadm kubectl --disableexcludes=kubernetes
+
+## Start kubelet
+    sudo systemctl start kubelet
+    sudo systemctl enable --now kubelet
     kubectl version --client
 
 ## Set SELinux in permissive mode (effectively disabling it)
     sudo setenforce 0
     sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
-    sudo systemctl enable --now kubelet
 
+# Turn off swap on fstab
     sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
     sudo swapoff -a
 
@@ -73,7 +80,43 @@
     sudo firewall-cmd --add-port={4789,8285,8472}/udp --permanent
     sudo firewall-cmd --reload
 
-
+## Initialize master node
     lsmod | grep br_netfilter
 
+## Pull kubernetes images
     sudo kubeadm config images pull
+
+## Install using kubeadm
+    export CALICO_IPV4POOL_CIDR=172.16.0.0
+    export MASTER_IP=192.168.1.190
+
+    sudo kubeadm init \
+      --pod-network-cidr=$CALICO_IPV4POOL_CIDR/12 \
+      --apiserver-advertise-address=$MASTER_IP \
+      --apiserver-cert-extra-sans=$MASTER_IP
+
+## Setup and verify k8s cluster
+    mkdir -p $HOME/.kube
+    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+    kubectl cluster-info
+
+## Install CNI (calico)
+    kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+
+## See k8s workloads
+    kubectl get pods --all-namespaces
+    kubectl get nodes -o wide
+
+## Install kubernetes dashboard
+    git clone https://github.com/achikam/install-k8s.git
+    chmod +x ~/install-k8s/dashboard.sh
+    sudo ln -s ~/install-k8s/dashboard.sh /usr/local/bin/dashboard
+    dashboard start
+    kubectl get pods -A
+
+## Access kubernetes dashboard
+    Access http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
+or 
+    http://[master_node_IP]:[port_service]
